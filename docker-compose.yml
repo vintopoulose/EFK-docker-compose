@@ -1,0 +1,49 @@
+version: "3"
+services:
+  fluentd:
+    build: ./fluentd
+    volumes:
+      - ./fluentd/conf:/fluentd/etc
+    container_name: fluentd
+    links:
+      - "elasticsearch"
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: 100m
+        max-file: "5"
+    networks:
+     - elastic
+    
+  elasticsearch:
+    image: elasticsearch:7.17.22
+    container_name: elastic
+    ports:
+      - "9200:9200"
+    environment:
+      - "bootstrap.memory_lock=false"
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "xpack.security.enabled=false"
+      - "discovery.type=single-node"
+      - "ELASTIC_PASSWORD=mysecret"
+      - "ELASTIC_USERNAME=elastic"
+      - "cluster.name=docker-cluster"
+    networks:
+      - elastic
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.0.1
+    container_name: kibana
+    environment:
+      ELASTICSEARCH_URL: "http://elasticsearch:9200"      
+    ports:
+      - 5601:5601
+    depends_on:
+      - elasticsearch
+    networks:
+      - elastic      
+networks:
+  elastic:
+    driver: bridge
